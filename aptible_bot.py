@@ -6,59 +6,108 @@
 import requests
 import time
 import json
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
 apt_key = os.getenv('APTIBLE_KEY')
 apt_url = os.getenv('APTIBLE_ROUTE')
+apt_head = {'X-API-KEY': apt_key, 'Accept': 'application/json', 'Content-Type': 'application/json'}
 
-# check for active requests in queue
 
 def pending_request_check():
+    # check for active requests in queue
 
-    request_queue = requests.get(url + 'authorization_request_queue')
-    if request_queue.status_code == '200':
-        queue_json = json.loads(request_queue.text)
-        print("queue contents: ")
-        print(queue_json)
-        print("End of contents, returning to main menu.")
-        print("")
-        what_to_do()
+    request_queue = requests.get(apt_url + 'authorization_request_queue', headers=apt_head)
+    if request_queue.status_code == 200:
+        queue_blob = request_queue.json()
+        queue_info = queue_blob['authorization_requests']
+        print("***Queue successfully retrieved.***")
+        # what_to_do()
     else:
-        print("Unknown error encountered. Returning to main menu.")
+        print("Unknown error encountered.")
+        print("Error: ",  request_queue.status_code)
         print("")
-        what_to_do()
 
-def pull_request_ids():
-    # retrieve ids of active requests in queue
-    print("pending")
+    return queue_info
 
+    # dict['authorization_requests'] contains list of n requests
+    # each request is a dict
+    # 'id', 'created_at', 'updated_at', '_type', 'dataroom_id', 'email', 'message', 'status', 'requested_at'
+    # 'links' { 'self': {' href': }}
 
-def request_details():
-    # get information on active requests
-    print("pending")
+def show_queue_info():
+    # display the information of what is in the queue
+
+    queue_size = len(queue_info)
+    print("There are ", queue_size, " requests in the queue.")
+
+    for i in range(0, len(queue_info)):
+        print("Request ", i + 1, ":")
+        print("Request ID: ", queue_info[i]['id'])
+        print("Request Date: ", queue_info[i]['requested_at'])
+        print("Requester Email: ", queue_info[i]['email'])
+        print("Request Message: ", queue_info[i]['message'])
+        print("")
+
 
 def approve_requests():
     # approve a request? all? tbd
     print("pending")
+
+    to_approve = input("What number request would you like to approve? >>> ")
+    if to_approve.isnumeric() == False:
+        print("Please enter a number.")
+        approve_requests()
+    index = int(to_approve) - 1
+    if index > len(queue_info):
+        print("please try another request, this one is not found.")
+        approve_requests()
+    approve_id = queue_info[index]['id']
+    print("Access groups are:")
+    group_pull = requests.get(apt_url + 'access_groups', headers=apt_head)
+    group_blob = group_pull.json()
+    group_list = group_blob['access_groups']
+    print("Access Groups:")
+    for i in range(0, len(group_list)):
+        print(" > ", i+1, group_list[i]['name'])
+    accesses = input("Please enter the numbers you would like, no spaces or commas >>> ")
+    if accesses.isnumeric() == False:
+        print("Please enter only numeric group IDs.")
+        approve_requests()
+    access_list = list(accesses)
+    email = input("Please provide your email address >>> ")
+    payload = { 'request_id': approve_id,
+                'reviewer_email': email,
+                'access_group_ids': access_list }
+    do_approval = requests.post(apt_url + 'authorizations', headers=apt_head, params=payload)
+    print('raw: ', do_approval)
+    print('json: ', do_approval.json())
+    print('reason: ', do_approval.reason)
+    print('text: ', do_approval.text)
+
+
+    # access groups are: NDA required, pen test, bcp, cap one, coalfire, karnold, SIG light
+
 
 def get_user_info():
     # for purposes of cli testing, get user info
     # in slack version, should pull from user info
     print("pending")
 
+
 def handle_action_choice(choice):
     # for purposes of cli testing, handle cli input
 
     action = choice.lower()
     if action == 'q':
-        pending_request_check()
+        show_queue_info()
     elif action == 'a':
         approve_requests()
     elif action == 'd':
         request_details()
     elif action == 'x':
-        quit()
+        os.exit()
     else:
         print("Unclear input. Please try again.")
         print("")
@@ -75,3 +124,8 @@ def what_to_do():
     print("     X: exit")
     print("")
     action_choice = input(">>> ")
+    handle_action_choice(action_choice)
+
+
+queue_info = pending_request_check()
+# what_to_do()
