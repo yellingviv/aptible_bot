@@ -3,6 +3,7 @@
 # this is something of a beta test of the new API so let's be kind :)
 
 # from flask import Flask, render_template, redirect, request, flash, session, jsonify
+from flask import jsonify
 import requests
 import time
 import json
@@ -64,7 +65,6 @@ def approve_requests():
         print("please try another request, this one is not found.")
         approve_requests()
     approve_id = queue_info[index]['id']
-    print("Access groups are:")
     group_pull = requests.get(apt_url + 'access_groups', headers=apt_head)
     group_blob = group_pull.json()
     group_list = group_blob['access_groups']
@@ -76,15 +76,22 @@ def approve_requests():
         print("Please enter only numeric group IDs.")
         approve_requests()
     access_list = list(accesses)
+    access_ids = []
+    for access in access_list:
+        index = int(access) - 1
+        id = group_list[index][id]
+        access_ids.append(id)
     email = input("Please provide your email address >>> ")
     payload = { 'request_id': approve_id,
                 'reviewer_email': email,
-                'access_group_ids': access_list }
-    do_approval = requests.post(apt_url + 'authorizations', headers=apt_head, params=payload)
-    print('raw: ', do_approval)
-    print('json: ', do_approval.json())
-    print('reason: ', do_approval.reason)
-    print('text: ', do_approval.text)
+                'access_group_ids': access_ids,
+                'nda_bypass': False }
+    print('Payload: ', payload)
+    do_approval = requests.post(apt_url + 'authorizations', headers=apt_head, json=payload)
+    if str(do_approval.status_code)[0] == '2':
+        print('Request successfully approved.')
+    else:
+        print('Error encountered. Error code ', do_approval.status_code, '. Please contact @vivienne.')
 
 
     # access groups are: NDA required, pen test, bcp, cap one, coalfire, karnold, SIG light
