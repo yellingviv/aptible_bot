@@ -3,7 +3,6 @@
 # this is something of a beta test of the new API so let's be kind :)
 
 # from flask import Flask, render_template, redirect, request, flash, session, jsonify
-from flask import jsonify
 import requests
 import time
 import json
@@ -81,7 +80,7 @@ def approve_requests():
         index = int(access) - 1
         id = group_list[index][id]
         access_ids.append(id)
-    email = input("Please provide your email address >>> ")
+    email = get_user_info()
     payload = { 'request_id': approve_id,
                 'reviewer_email': email,
                 'access_group_ids': access_ids,
@@ -94,13 +93,12 @@ def approve_requests():
         print('Error encountered. Error code ', do_approval.status_code, '. Please contact @vivienne.')
 
 
-    # access groups are: NDA required, pen test, bcp, cap one, coalfire, karnold, SIG light
-
-
 def get_user_info():
     # for purposes of cli testing, get user info
     # in slack version, should pull from user info
-    print("pending")
+
+    email = input("Please provide your email address >>> ")
+    return email
 
 
 def handle_action_choice(choice):
