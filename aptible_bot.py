@@ -70,16 +70,21 @@ def approve_requests():
     print("Access Groups:")
     for i in range(0, len(group_list)):
         print(" > ", i+1, group_list[i]['name'])
+    print(" > 00 Default access. Cannot be paired with any other access option.")
     accesses = input("Please enter the numbers you would like, no spaces or commas >>> ")
     if accesses.isnumeric() == False:
         print("Please enter only numeric group IDs.")
         approve_requests()
     access_list = list(accesses)
     access_ids = []
+    print(access_list)
     for access in access_list:
-        index = int(access) - 1
-        id = group_list[index][id]
-        access_ids.append(id)
+        if access == '00':
+            access_ids = []
+        else:
+            index = int(access) - 1
+            id = group_list[index]['id']
+            access_ids.append(id)
     email = get_user_info()
     payload = { 'request_id': approve_id,
                 'reviewer_email': email,
