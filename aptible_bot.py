@@ -75,13 +75,10 @@ def approve_requests():
     if accesses.isnumeric() == False:
         print("Please enter only numeric group IDs.")
         approve_requests()
-    access_list = list(accesses)
     access_ids = []
-    print(access_list)
-    for access in access_list:
-        if access == '00':
-            access_ids = []
-        else:
+    if accesses != '00':
+        access_list = list(accesses)
+        for access in access_list:
             index = int(access) - 1
             id = group_list[index]['id']
             access_ids.append(id)
