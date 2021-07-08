@@ -22,12 +22,12 @@ def pending_request_check():
     if request_queue.status_code == 200:
         queue_blob = request_queue.json()
         queue_info = queue_blob['authorization_requests']
-        print("***Queue successfully retrieved.***")
+        print('***Queue successfully retrieved.***')
         # what_to_do()
     else:
-        print("Unknown error encountered.")
-        print("Error: ",  request_queue.status_code)
-        print("")
+        print('Unknown error encountered.')
+        print('Error: ',  request_queue.status_code)
+        print('')
 
     return queue_info
 
@@ -40,40 +40,40 @@ def show_queue_info():
     # display the information of what is in the queue
 
     queue_size = len(queue_info)
-    print("There are ", queue_size, " requests in the queue.")
+    print('There are ', queue_size, ' requests in the queue.')
 
     for i in range(0, len(queue_info)):
-        print("Request ", i + 1, ":")
-        print("Request ID: ", queue_info[i]['id'])
-        print("Request Date: ", queue_info[i]['requested_at'])
-        print("Requester Email: ", queue_info[i]['email'])
-        print("Request Message: ", queue_info[i]['message'])
-        print("")
+        print('Request ', i + 1, ':')
+        print('Request ID: ', queue_info[i]['id'])
+        print('Request Date: ', queue_info[i]['requested_at'])
+        print('Requester Email: ', queue_info[i]['email'])
+        print('Request Message: ', queue_info[i]['message'])
+        print('')
 
 
 def approve_requests():
     # approve a request? all? tbd
-    print("pending")
+    print('pending')
 
-    to_approve = input("What number request would you like to approve? >>> ")
+    to_approve = input('What number request would you like to approve? >>> ')
     if to_approve.isnumeric() == False:
-        print("Please enter a number.")
+        print('Please enter a number.')
         approve_requests()
     index = int(to_approve) - 1
     if index > len(queue_info):
-        print("please try another request, this one is not found.")
+        print('please try another request, this one is not found.')
         approve_requests()
     approve_id = queue_info[index]['id']
     group_pull = requests.get(apt_url + 'access_groups', headers=apt_head)
     group_blob = group_pull.json()
     group_list = group_blob['access_groups']
-    print("Access Groups:")
+    print('Access Groups:')
     for i in range(0, len(group_list)):
-        print(" > ", i+1, group_list[i]['name'])
-    print(" > 00 Default access. Cannot be paired with any other access option.")
-    accesses = input("Please enter the numbers you would like, no spaces or commas >>> ")
+        print(' > ', i+1, group_list[i]['name'])
+    print(' > 00 Default access. Cannot be paired with any other access option.')
+    accesses = input('Please enter the numbers you would like, no spaces or commas >>> ')
     if accesses.isnumeric() == False:
-        print("Please enter only numeric group IDs.")
+        print('Please enter only numeric group IDs.')
         approve_requests()
     access_ids = []
     if accesses != '00':
@@ -99,7 +99,7 @@ def get_user_info():
     # for purposes of cli testing, get user info
     # in slack version, should pull from user info
 
-    email = input("Please provide your email address >>> ")
+    email = input('Please provide your email address >>> ')
     return email
 
 
@@ -116,21 +116,21 @@ def handle_action_choice(choice):
     elif action == 'x':
         os.exit()
     else:
-        print("Unclear input. Please try again.")
-        print("")
+        print('Unclear input. Please try again.')
+        print('')
         what_to_do()
 
 
 def what_to_do():
     # for purposes of cli testing, serve option menu
 
-    print("What would you like to do? Input a single letter.")
-    print("     Q: check queue")
-    print("     A: approve pending requests")
-    print("     D: get details about pending requests")
-    print("     X: exit")
-    print("")
-    action_choice = input(">>> ")
+    print('What would you like to do? Input a single letter.')
+    print('     Q: check queue')
+    print('     A: approve pending requests')
+    print('     D: get details about pending requests')
+    print('     X: exit')
+    print('')
+    action_choice = input('>>> ')
     handle_action_choice(action_choice)
 
 
