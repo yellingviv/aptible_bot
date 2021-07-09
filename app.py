@@ -17,27 +17,19 @@ app = App(
 logger = logging.getLogger(__name__)
 channel_id = os.getenv('SLACK_CHANNEL_ID')
 
-# Add functionality here
+try:
+    result = app.client.chat_postMessage(
+        channel=channel_id,
+        blocks=slack_messages.new_request,
+        text="in case of emergency, break glass"
+    )
+    # print result because debugging
+    print(result)
 
-def post_to_channel():
-    # post a message to a channel yay
-
-    print('trying to post to channel')
-
-    try:
-        # Call the conversations.list method using the WebClient
-        result = app.client.chat_postMessage(
-            channel=channel_id,
-            #blocks=new_request,
-            text='henlo???'
-        )
-        # Print result, which includes information about the message (like TS)
-        print(result)
-
-    except SlackApiError as e:
-        print(f'Error: {e}')
+except SlackApiError as e:
+    print(f"Error: {e}")
 
 
 # start the app
-if __name__ == '__main__':
-    app.start(port=int(os.environ.get('PORT', 3000)))
+if __name__ == "__main__":
+    app.start(port=int(os.environ.get("PORT", 3000)))
