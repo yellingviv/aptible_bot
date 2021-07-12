@@ -27,24 +27,24 @@ new_request = [
                             "type": "mrkdwn",
                             "text": "FedRAMP"
                         },
-                        "value": "value-0"
+                        "value": "fed"
                     },
                     {
                         "text": {
                             "type": "mrkdwn",
                             "text": "SOX"
                         },
-                        "value": "value-1"
+                        "value": "sox"
                     },
                     {
                         "text": {
                             "type": "mrkdwn",
                             "text": "SIG-Lite"
                         },
-                        "value": "value-2"
+                        "value": "sig"
                     }
                 ],
-                "action_id": "actionId-1"
+                "action_id": "perms"
             }
         ]
     },
@@ -58,7 +58,7 @@ new_request = [
                     "text": "Approve Request"
                 },
                 "value": "approve",
-                "action_id": "approve_request"
+                "action_id": "approve"
             }
         ]
     }
