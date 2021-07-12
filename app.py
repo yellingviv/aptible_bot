@@ -17,17 +17,26 @@ app = App(
 logger = logging.getLogger(__name__)
 channel_id = os.getenv('SLACK_CHANNEL_ID')
 
+permissions = []
+
 try:
     result = app.client.chat_postMessage(
         channel=channel_id,
         blocks=slack_messages.new_request,
         text="in case of emergency, break glass"
     )
-    # print result because debugging
-    print(result)
+    logger.info(result)
 
 except SlackApiError as e:
     print(f"Error: {e}")
+
+
+@app.action("button_click")
+def update_permissions(ack, body, payload):
+    ack()
+    print('did i succed')
+    print(payload)
+    say("I clicked it")
 
 
 # start the app
