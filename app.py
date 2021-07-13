@@ -2,6 +2,7 @@ import os
 import logging
 from slack_bolt import App
 from slack_sdk.errors import SlackApiError
+from flask import Flask, request
 from dotenv import load_dotenv
 import aptible_bot
 import aptible_monitor
@@ -16,8 +17,6 @@ app = App(
 )
 logger = logging.getLogger(__name__)
 channel_id = os.getenv('SLACK_CHANNEL_ID')
-
-permissions = []
 
 try:
     result = app.client.chat_postMessage(
