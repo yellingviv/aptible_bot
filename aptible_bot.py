@@ -41,14 +41,18 @@ def show_queue_info():
 
     queue_size = len(queue_info)
     print('There are ', queue_size, ' requests in the queue.')
+    queue_specifics = []
 
     for i in range(0, len(queue_info)):
-        print('Request ', i + 1, ':')
-        print('Request ID: ', queue_info[i]['id'])
-        print('Request Date: ', queue_info[i]['requested_at'])
-        print('Requester Email: ', queue_info[i]['email'])
-        print('Request Message: ', queue_info[i]['message'])
-        print('')
+        queue_item = {}
+        queue_item['id'] = queue_info[i]['id']
+        queue_item['time'] = queue_info[i]['requested_at']
+        queue_item['from'] = queue_info[i]['email']
+        queue_item['message'] = queue_info[i]['message']
+        queue_item['status'] = queue_info[i]['status']
+        queue_specifics.append(queue_item)
+
+    return queue_specifics
 
 
 def approve_requests():
@@ -132,7 +136,6 @@ def what_to_do():
     print('')
     action_choice = input('>>> ')
     handle_action_choice(action_choice)
-
 
 queue_info = pending_request_check()
 # what_to_do()
