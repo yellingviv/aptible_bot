@@ -37,7 +37,7 @@ def pending_request_check():
     # 'links' { 'self': {' href': }}
 
 def show_queue_info():
-    # display the information of what is in the queue
+    # clean up the queue to be easier to put into blocks. this is vanity mostly.
 
     queue_size = len(queue_info)
     print('There are ', queue_size, ' requests in the queue.')
@@ -50,6 +50,7 @@ def show_queue_info():
         queue_item['from'] = queue_info[i]['email']
         queue_item['message'] = queue_info[i]['message']
         queue_item['status'] = queue_info[i]['status']
+        queue_item['url'] = queue_info[i]['_links']['self']['href']
         queue_specifics.append(queue_item)
 
     return queue_specifics
@@ -57,28 +58,11 @@ def show_queue_info():
 
 def approve_requests():
     # approve a request? all? tbd
-    print('pending')
 
-    to_approve = input('What number request would you like to approve? >>> ')
-    if to_approve.isnumeric() == False:
-        print('Please enter a number.')
-        approve_requests()
-    index = int(to_approve) - 1
-    if index > len(queue_info):
-        print('please try another request, this one is not found.')
-        approve_requests()
     approve_id = queue_info[index]['id']
     group_pull = requests.get(apt_url + 'access_groups', headers=apt_head)
     group_blob = group_pull.json()
     group_list = group_blob['access_groups']
-    print('Access Groups:')
-    for i in range(0, len(group_list)):
-        print(' > ', i+1, group_list[i]['name'])
-    print(' > 00 Default access. Cannot be paired with any other access option.')
-    accesses = input('Please enter the numbers you would like, no spaces or commas >>> ')
-    if accesses.isnumeric() == False:
-        print('Please enter only numeric group IDs.')
-        approve_requests()
     access_ids = []
     if accesses != '00':
         access_list = list(accesses)
@@ -99,43 +83,24 @@ def approve_requests():
         print('Error encountered. Error code ', do_approval.status_code, '. Please contact @vivienne.')
 
 
-def get_user_info():
-    # for purposes of cli testing, get user info
-    # in slack version, should pull from user info
+def get_perms():
+    # pull access groups and format to use in options
 
-    email = input('Please provide your email address >>> ')
-    return email
+    access_pull = requests.get(apt_url + 'access_groups', headers=apt_head)
+    access_blob = access_pull.json()
+    access_list = access_blob['access_groups']
+    access_choices = []
+    for i in range(0, len(access_list)):
+        access_option = {
+            "text": {
+                "type": "plain_text",
+                "text": access_list[i]['name']
+            },
+            "value": access_list[i]['id']
+        }
+        access_choices.append(access_option)
+    return access_choices
 
-
-def handle_action_choice(choice):
-    # for purposes of cli testing, handle cli input
-
-    action = choice.lower()
-    if action == 'q':
-        show_queue_info()
-    elif action == 'a':
-        approve_requests()
-    elif action == 'd':
-        request_details()
-    elif action == 'x':
-        os.exit()
-    else:
-        print('Unclear input. Please try again.')
-        print('')
-        what_to_do()
-
-
-def what_to_do():
-    # for purposes of cli testing, serve option menu
-
-    print('What would you like to do? Input a single letter.')
-    print('     Q: check queue')
-    print('     A: approve pending requests')
-    print('     D: get details about pending requests')
-    print('     X: exit')
-    print('')
-    action_choice = input('>>> ')
-    handle_action_choice(action_choice)
 
 queue_info = pending_request_check()
 # what_to_do()

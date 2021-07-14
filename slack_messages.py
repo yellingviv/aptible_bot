@@ -20,7 +20,7 @@ for i in range(0, len(reqs)):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "New request from " + reqs[i]['from']
+                    "text": "<" + reqs[i]['url'] + "|New request> from " + reqs[i]['from']
                 }
             },
             {
@@ -38,50 +38,16 @@ for i in range(0, len(reqs)):
                 }
             },
             {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
+                "type": "input",
+                "element": {
+                    "type": "checkboxes",
+                     "options": aptible_bot.get_perms(),
+                    "action_id": "perms"
+                },
+                "label": {
+                    type: "plain_text",
                     "text": "All requests are granted standard permissions. Use the checkboxes to add additional permissions if needed."
                 }
-            },
-            {
-                "type": "actions",
-                "elements": [
-                    {
-                        "type": "checkboxes",
-                        "options": [
-                            {
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": "Pen Test"
-                                },
-                                "value": "pen"
-                            },
-                            {
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": "BCP"
-                                },
-                                "value": "bcp"
-                            },
-                            {
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": "System Diagram"
-                                },
-                                "value": "diagram"
-                            },
-                            {
-                                "text": {
-                                    "type": "mrkdwn",
-                                    "text": "SIG Lite"
-                                },
-                                "value": "sig"
-                            }
-                        ],
-                        "action_id": "perms"
-                    }
-                ]
             },
             {
                 "type": "actions",
@@ -108,5 +74,3 @@ for i in range(0, len(reqs)):
             }
         ]
         queue_blocks.append(req_block)
-
-print(queue_blocks)
