@@ -37,13 +37,23 @@ if queue_info != []:
 
 
 @app.action("approve")
-def handle_approval(ack, body, client):
+def handle_approval(ack, body, client, say):
     ack()
     payload = body['message']['blocks']
     selections = body['state']['values']
     addtl_perms = aptible_bot.get_selections(payload, selections)
+    if addtl_perms == 'yikes':
+        say("Something went wrong with the permissions. Please contact @vivienne.")
     get_email = client.users_info(user=body['user']['id'])
     user_email = get_email['user']['profile']['email']
+    request_id = body['actions'][0]['value']
+    approve_it = aptible_bot.approve_requests(request_id, user_email, addtl_perms)
+    if approve_it == 'yay':
+        say("Approval success!")
+        update_request_screen(body['container'])
+    else:
+        print(approve_it)
+        say(approve_it)
 
 
 @app.action("reject")
@@ -58,6 +68,18 @@ def handle_rejection(ack, body, client):
 def handle_perm_ticks(ack, body, client):
     ack()
     print('they messin with them boxes again')
+
+
+def update_request_screen(msg_info, client):
+    ts = msg_info['message_ts']
+    try:
+        result = app.client.chat_update(
+            channel=channel_id,
+            ts=ts,
+            blocks=[{"type": "section", "text": {"type": "plain_text", "text": "hahahaha maniacal laughter"}}]
+        )
+    except SlackApiError as e:
+        print(f"Error: {e}")
 
 # start the app
 if __name__ == "__main__":
