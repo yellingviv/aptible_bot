@@ -35,24 +35,26 @@ if queue_info != []:
 
 
 @app.action("approve")
-def handle_approval(ack, body, respond):
+def handle_approval(ack, body, client):
     ack()
     print('approve button go clicky')
-    respond(f"<@{['selected_user']}> made the approve button go clicky")
+    print(body)
+    get_email = client.users_info(user=body['user']['id'])
+    user_email = get_email['user']['profile']['email']
 
 
 @app.action("reject")
-def handle_rejection(ack, body, logger):
+def handle_rejection(ack, body, client):
     ack()
     print('reject button go clicky')
+    get_email = client.users_info(user=body['user']['id'])
+    user_email = get_email['user']['profile']['email']
 
 
 @app.action("perms")
 def handle_perm_ticks(ack, body, client):
     ack()
-    get_email = client.users_info(user=body['user']['id'])
-    user_email = get_email['user']['profile']['email']
-    print(user_email)
+    print('they messin with them boxes again')
 
 # start the app
 if __name__ == "__main__":
