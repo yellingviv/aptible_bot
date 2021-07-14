@@ -56,31 +56,21 @@ def show_queue_info():
     return queue_specifics
 
 
-def approve_requests():
-    # approve a request? all? tbd
+def approve_requests(request_id, email, addtl_perms):
+    # approve a request
 
-    approve_id = queue_info[index]['id']
-    group_pull = requests.get(apt_url + 'access_groups', headers=apt_head)
-    group_blob = group_pull.json()
-    group_list = group_blob['access_groups']
-    access_ids = []
-    if accesses != '00':
-        access_list = list(accesses)
-        for access in access_list:
-            index = int(access) - 1
-            id = group_list[index]['id']
-            access_ids.append(id)
-    email = get_user_info()
-    payload = { 'request_id': approve_id,
+    payload = { 'request_id': request_id,
                 'reviewer_email': email,
-                'access_group_ids': access_ids,
+                'access_group_ids': addtl_perms,
                 'nda_bypass': False }
     print('Payload: ', payload)
     do_approval = requests.post(apt_url + 'authorizations', headers=apt_head, json=payload)
     if str(do_approval.status_code)[0] == '2':
         print('Request successfully approved.')
+        return('yay')
     else:
-        print('Error encountered. Error code ', do_approval.status_code, '. Please contact @vivienne.')
+        error_msg = 'Error encountered while attempting to approve this request. Error code received is ' + str(do_approval.status_code) + '. Please contact @vivienne for help.'
+        return error_msg
 
 
 def get_perms():
@@ -117,7 +107,6 @@ def get_selections(payload, selections):
     for i in range(0, num_selected):
         access_id = selections[block_id[0]]['perms']['selected_options'][i]['value']
         extras.append(access_id)
-    print(extras)
     return extras
 
 
