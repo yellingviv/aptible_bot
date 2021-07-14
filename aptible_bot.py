@@ -102,5 +102,24 @@ def get_perms():
     return access_choices
 
 
+def get_selections(payload, selections):
+    # sort through the giant effing block of slack interactivity response for data
+
+    block_id = []
+    for field in payload:
+        if field['type'] == 'input':
+            block_id.append(field['block_id'])
+    if len(block_id) != 1:
+        print('somehow we have more than one input field, please panic')
+        return('yikes')
+    extras = []
+    num_selected = len(selections[block_id[0]]['perms']['selected_options'])
+    for i in range(0, num_selected):
+        access_id = selections[block_id[0]]['perms']['selected_options'][i]['value']
+        extras.append(access_id)
+    print(extras)
+    return extras
+
+
 queue_info = pending_request_check()
 # what_to_do()
