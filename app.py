@@ -1,6 +1,7 @@
 import os
 import logging
 from slack_bolt import App
+from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from flask import Flask, request
 from dotenv import load_dotenv
@@ -22,12 +23,13 @@ channel_id = os.getenv('SLACK_CHANNEL_ID')
 queue_info = aptible_bot.pending_request_check()
 
 if queue_info != []:
-    for i in range(0, len(slack_messages.queue_blocks)):
+    queue = slack_messages.create_queue()
+    for i in range(0, len(queue)):
         try:
             result = app.client.chat_postMessage(
                 channel=channel_id,
-                blocks=slack_messages.queue_blocks[i],
-                text="in case of emergency, break glass"
+                blocks=queue[i],
+                text="you should only see this if something went wrong, which means something went wrong. Please contact @vivienne!"
             )
             logger.info(result)
         except SlackApiError as e:
@@ -37,8 +39,9 @@ if queue_info != []:
 @app.action("approve")
 def handle_approval(ack, body, client):
     ack()
-    print('approve button go clicky')
-    print(body)
+    payload = body['message']['blocks']
+    selections = body['state']['values']
+    addtl_perms = aptible_bot.get_selections(payload, selections)
     get_email = client.users_info(user=body['user']['id'])
     user_email = get_email['user']['profile']['email']
 
