@@ -9,7 +9,6 @@ queue_blocks = []
 def create_queue():
 
     for i in range(0, len(reqs)):
-        print('looking at req ', i, ' of ', len(reqs))
         if reqs[i]['status'] == 'requested':
             req_block =[
                 {
@@ -61,7 +60,7 @@ def create_queue():
                                 "type": "plain_text",
                                 "text": "Approve Request"
                             },
-                            "value": "yes",
+                            "value": reqs[i]['id'],
                             "action_id": "approve"
                         },
                         {
@@ -70,7 +69,7 @@ def create_queue():
                                 "type": "plain_text",
                                 "text": "Reject Request"
                             },
-                            "value": "no",
+                            "value": reqs[i]['id'],
                             "action_id": "reject"
                         }
                     ]
