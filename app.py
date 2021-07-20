@@ -53,7 +53,14 @@ def handle_approval(ack, body, client, say):
         update_request_screen(body['container'])
     else:
         print(approve_it)
-        say(approve_it)
+        try:
+            response = app.client.chat_postMessage(
+                channel=channel_id,
+                ts=body['container']['message_ts'],
+                text=approve_it
+            )
+        except SlackApiError as e:
+            print(f"Error: {e}")
 
 
 @app.action("reject")
