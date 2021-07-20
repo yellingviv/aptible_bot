@@ -110,5 +110,11 @@ def get_selections(payload, selections):
     return extras
 
 
+def status_update(id, email):
+    payload = {'status': 'ignored', 'reviewer_email': 'vpustell@pagerduty.com'}
+    new_status = requests.patch(apt_url + 'authorization_requests/' + id, headers=apt_head, json=payload)
+    print(new_status.status_code)
+
+
 queue_info = pending_request_check()
 # what_to_do()
