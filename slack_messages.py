@@ -2,11 +2,11 @@
 # this shit just gets long and i don't wanna crowd the main app file
 
 import aptible_bot
+from datetime import datetime
 
-reqs = aptible_bot.show_queue_info()
-queue_blocks = []
+def create_queue(reqs):
 
-def create_queue():
+    queue_blocks = []
 
     for i in range(0, len(reqs)):
         if reqs[i]['status'] == 'requested':
@@ -81,3 +81,26 @@ def create_queue():
             print(reqs[i]['name'], reqs[i]['status'])
 
     return queue_blocks
+
+
+def update_request_approved(from, user):
+
+    approved_time = datetime.now()
+    stamp = approved_time.strftime("%B %d, %Y, %I:%M %p")
+    approved_blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": ":sparkles: Aptible Room Request :sparkles:"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Request from " ugh + " approved by " + user + " at " + stamp
+            }
+        }]
+
+    return approved_blocks
