@@ -1,6 +1,7 @@
 import os
 import logging
 from slack_bolt import App
+from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from flask import Flask, request
@@ -23,7 +24,7 @@ channel_id = os.getenv('SLACK_CHANNEL_ID')
 queue_info = aptible_bot.pending_request_check()
 
 if queue_info != []:
-    reqs = aptible_bot.show_queue_info()
+    reqs = aptible_bot.get_queue_info(queue_info)
     queue = slack_messages.create_queue(reqs)
     for i in range(0, len(queue)):
         try:
@@ -93,6 +94,17 @@ def update_request_screen(msg_info, client):
         print(f"Error: {e}")
 
 
+# setting up flask to provide safer happier friendly friend life
+flask_app = Flask(__name__)
+handler = SlackRequestHandler(app)
+
+
+@flask_app.route("/slack/events", methods=["POST"])
+def slack_events():
+    return handler.handle(request)
+
+
 # start the app
 if __name__ == "__main__":
     app.start(port=int(os.environ.get("PORT", 3000)))
+# FLASK_APP=app.py FLASK_ENV=development flask run -p 3000
