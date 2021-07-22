@@ -16,8 +16,9 @@ class Rooms(db.Model):
     message = db.Column(db.String(500), nullable=False)
     status = db.Column(db.String(20), nullable=False)
     url = db.Column(db.String(150), nullable=False)
-    approver = db.Column(db.String(100))
-    approved_at = db.Column(db.String(25), nullable)
+    reviewer = db.Column(db.String(100), nullable)
+    reviewed_at = db.Column(db.String(25), nullable)
+    reject_note = db.Column(db.String(500), nullable)
 
     def __repr__(self):
         return f"<Room Request: {self.request_id} from {self.email} at {self.requested_at}. Status is {self.status}."
