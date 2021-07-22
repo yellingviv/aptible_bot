@@ -9,6 +9,7 @@ import json
 import os
 from dotenv import load_dotenv
 from rooms_model import connect_to_db, db, Rooms
+from datetime import datetime
 
 load_dotenv()
 apt_key = os.getenv('APTIBLE_KEY')
@@ -52,9 +53,17 @@ def get_queue_info(queue_info):
         queue_item['time'] = queue_info[i]['requested_at']
         queue_item['from'] = queue_info[i]['email']
         queue_item['message'] = queue_info[i]['message']
-        queue_item['status'] = queue_info[i]['status']
         queue_item['url'] = queue_info[i]['_links']['self']['href']
         queue_specifics.append(queue_item)
+        new_request = Rooms(request_id=queue_item['id'],
+                            email=queue_item['from'],
+                            requested_at=queue_item['time'],
+                            message=queue_item['message'],
+                            status='waiting',
+                            url=queue_item['url'])
+        db.session.add(new_request)
+        db.session.commit()
+        print(f"added {queue_info['id']} request to database")
 
     return queue_specifics
 
@@ -66,10 +75,12 @@ def approve_requests(request_id, email, addtl_perms):
                 'reviewer_email': email,
                 'access_group_ids': addtl_perms,
                 'nda_bypass': False }
+    contact =
     print('Payload: ', payload)
     do_approval = requests.post(apt_url + 'authorizations', headers=apt_head, json=payload)
     if str(do_approval.status_code)[0] == '2':
         print('Request successfully approved.')
+        update_request_info(request_id, email, 'approved')
         return('yay')
     else:
         error_msg = 'Error encountered while attempting to approve this request. Error code received is ' + str(do_approval.status_code) + '. Please contact @vivienne for help.'
@@ -114,10 +125,14 @@ def get_selections(payload, selections):
     return extras
 
 
-def status_update(id, email):
-    # this is probably going to be deleted because otherwise it ruins everything
-    # okay so instead of updating the API we need to update the db, love that for us
+def update_request_info(request_id, email, action, note="N/A"):
+    # update request info in the db once approved or not
 
-    payload = {'status': 'ignored', 'reviewer_email': 'vpustell@pagerduty.com'}
-    new_status = requests.patch(apt_url + 'authorization_requests/' + id, headers=apt_head, json=payload)
-    print(new_status.status_code)
+    processed_request = db.session.query(Rooms).filter_by(request_id=request_id).first()
+    processed_request.reviewer = email
+    processed_request.reviewed_at = datetime.now()
+    if action == 'approved':
+        processed_request.status = 'approved'
+    elif action == 'rejected':
+        processed_request.status = 'rejected'
+        processed_request.reject_note = note
