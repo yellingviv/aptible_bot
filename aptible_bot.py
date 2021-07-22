@@ -8,6 +8,7 @@ import time
 import json
 import os
 from dotenv import load_dotenv
+from rooms_model import connect_to_db, db, Rooms
 
 load_dotenv()
 apt_key = os.getenv('APTIBLE_KEY')
@@ -17,26 +18,28 @@ apt_head = {'X-API-KEY': apt_key, 'Accept': 'application/json', 'Content-Type': 
 
 def pending_request_check():
     # check for active requests in queue
+    # retrieve whatever is there if not empty
 
     request_queue = requests.get(apt_url + 'authorization_request_queue', headers=apt_head)
     if request_queue.status_code == 200:
         queue_blob = request_queue.json()
         queue_info = queue_blob['authorization_requests']
-        print('***Queue successfully retrieved.***')
-        # what_to_do()
+        print('Queue successfully retrieved.')
     else:
         print('Unknown error encountered.')
         print('Error: ',  request_queue.status_code)
         print('')
 
+    for i in range(0, len(queue_info)):
+        if db.session.query(Rooms).filter_by(request_id=queue_info[i]['id']):
+            print(db.session.query(Rooms).filter_by(request_id=queue_info[i]['id']))
+            print("request id " + queue_info[i]['id'] + " is already in db")
+            queue_info.pop(i)
+
     return queue_info
 
-    # dict['authorization_requests'] contains list of n requests
-    # each request is a dict
-    # 'id', 'created_at', 'updated_at', '_type', 'dataroom_id', 'email', 'message', 'status', 'requested_at'
-    # 'links' { 'self': {' href': }}
 
-def show_queue_info():
+def get_queue_info(queue_info):
     # clean up the queue to be easier to put into blocks. this is vanity mostly.
 
     queue_size = len(queue_info)
@@ -57,7 +60,7 @@ def show_queue_info():
 
 
 def approve_requests(request_id, email, addtl_perms):
-    # approve a request
+    # approve a request with specified permissions where applicable
 
     payload = { 'request_id': request_id,
                 'reviewer_email': email,
@@ -74,7 +77,7 @@ def approve_requests(request_id, email, addtl_perms):
 
 
 def get_perms():
-    # pull access groups and format to use in options
+    # pull access group permissions list and format to use in options list on Slack
 
     access_pull = requests.get(apt_url + 'access_groups', headers=apt_head)
     access_blob = access_pull.json()
@@ -94,6 +97,7 @@ def get_perms():
 
 def get_selections(payload, selections):
     # sort through the giant effing block of slack interactivity response for data
+    # specifically the data about what permissions are selected, and the request id
 
     block_id = []
     for field in payload:
@@ -111,10 +115,9 @@ def get_selections(payload, selections):
 
 
 def status_update(id, email):
+    # this is probably going to be deleted because otherwise it ruins everything
+    # okay so instead of updating the API we need to update the db, love that for us
+
     payload = {'status': 'ignored', 'reviewer_email': 'vpustell@pagerduty.com'}
     new_status = requests.patch(apt_url + 'authorization_requests/' + id, headers=apt_head, json=payload)
     print(new_status.status_code)
-
-
-queue_info = pending_request_check()
-# what_to_do()
