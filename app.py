@@ -51,6 +51,7 @@ def handle_approval(ack, body, client, say):
     addtl_perms = aptible_bot.get_selections(payload, selections)
     if addtl_perms == 'yikes':
         say("Something went wrong with the permissions. Please contact @vivienne.")
+    user_id = body['user']['id']
     # get_email = client.users_info(user=body['user']['id'])
     # user_email = get_email['user']['profile']['email']
     user_email = 'vpustell@pagerduty.com'
@@ -58,7 +59,8 @@ def handle_approval(ack, body, client, say):
     approve_it = aptible_bot.approve_requests(request_id, user_email, addtl_perms)
     if approve_it == 'yay':
         say("Approval success!")
-        update_request_screen(body['container'], requester, user_email, 'approve', client)
+        update_request_screen(body['container']['ts'], requester, user_id, 'approve', client)
+        # call_some_db_update_here_please()
     else:
         print(approve_it)
         try:
@@ -73,17 +75,15 @@ def handle_approval(ack, body, client, say):
 
 @app.action("reject")
 def handle_rejection(ack, body, client):
-    # process slack reject - update message, db, and aptible
+    # process slack reject - call for modal to get more info
 
     ack()
     print('reject button go clicky')
+    user_id = body['user']['id']
     get_email = client.users_info(user=body['user']['id'])
     user_email = get_email['user']['profile']['email']
     requester = body['message']['blocks'][1]['text']['text'][6:]
-    get_feedback(body, client)
-    # call a dialog to get the reason for the rejection and store it
-    # use the aptible bot function for the db
-    update_request_screen(body['container']['message_ts'], requester, user_email, 'reject', note, client)
+    get_feedback(body['container']['ts'], requester, user_id, client)
 
 
 @app.action("perms")
@@ -99,16 +99,17 @@ def handle_perm_ticks(ack):
 @app.view("feedback")
 def handle_view_submission(ack, body, client, view, logger):
     # process the submitted modal with rejection notes
-    
+
     ack()
     note  = view['state']['values']['feedback_text']['feedback_input']
-    user = body['user']
+    user_id = view['private_metadata']['user_id']
     requester = view['private_metadata']['requester']
     ts = view['private_metadata']['ts']
-    update_request_screen(ts, requester, user, 'reject', note, client)
+    update_request_screen(ts, requester, user_id, 'reject', note, client)
+    # also call to update the db plz
 
 
-def get_feedback(body, origin_ts, requester, client):
+def get_feedback(origin_ts, requester, user_id, client):
     # get feedback from reviewer on why the rejection via modal
 
     client.views_open(
@@ -127,12 +128,12 @@ def get_feedback(body, origin_ts, requester, client):
                 }
             ],
             "notify_on_close": True,
-            "private_metadata": {'ts': origin_ts, 'requester': requester}
+            "private_metadata": {'ts': origin_ts, 'requester': requester, 'user_id': user_id}
         }
     )
 
 
-def update_request_screen(ts, requester, user, status, note="N/A", client):
+def update_request_screen(ts, requester, user_id, status, note="N/A", client):
     # update the original request message with new content on action from reviewer
     # used by the handle_rejection and handle_approval actions
 

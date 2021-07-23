@@ -81,7 +81,7 @@ def create_queue(reqs):
     return queue_blocks
 
 
-def update_request(requester, user, status, note="N/A"):
+def update_request(requester, user_id, status, note="N/A"):
     # create a block that updates the original request message to show status
 
     approved_time = datetime.now()
@@ -98,7 +98,7 @@ def update_request(requester, user, status, note="N/A"):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": "Request from " requester + " " + status + "ed by " + user + " at " + stamp + "."
+                "text": "Request from " requester + " " + status + "ed by <@{user}> at " + stamp + "."
             }
         },
         {
