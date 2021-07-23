@@ -98,7 +98,7 @@ def update_request(requester, user_id, status, note="N/A"):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": "Request from " requester + " " + status + "ed by <@{user}> at " + stamp + "."
+                "text": f"Request from {requester} {status}ed by <@{user}> at {stamp}."
             }
         },
         {
