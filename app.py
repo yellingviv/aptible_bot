@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_sdk import WebClient
@@ -9,6 +10,7 @@ from dotenv import load_dotenv
 import aptible_bot
 import aptible_monitor
 import slack_messages
+import rooms_model
 
 load_dotenv()
 
@@ -20,6 +22,7 @@ app = App(
 logger = logging.getLogger(__name__)
 channel_id = os.getenv('SLACK_CHANNEL_ID')
 
+rooms_model.connect_to_db(app)
 
 # check the queue for new requests
 queue_info = aptible_bot.pending_request_check()
@@ -38,6 +41,8 @@ if queue_info != []:
             logger.info(result)
         except SlackApiError as e:
             print(f"Error: {e}")
+
+# time.sleep(60) - delay for 60 seconds
 
 
 @app.action("approve")
@@ -100,7 +105,8 @@ def handle_perm_ticks(ack):
 def handle_view_submission(ack, body, client, view, logger):
     # process the submitted modal with rejection notes
 
-    ack()
+    respond_close = {"response_action": "clear"}
+    ack(respond_close)
     note  = view['state']['values']['feedback_text']['feedback_input']
     user_id = view['private_metadata']['user_id']
     requester = view['private_metadata']['requester']
@@ -152,7 +158,6 @@ def update_request_screen(ts, requester, user_id, status, note="N/A", client):
 # setting up flask to provide safer happier friendly friend life
 flask_app = Flask(__name__)
 handler = SlackRequestHandler(app)
-
 
 @flask_app.route("/slack/events", methods=["POST"])
 def slack_events():
