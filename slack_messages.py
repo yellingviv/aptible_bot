@@ -16,7 +16,7 @@ def create_queue(reqs):
                 "type": "header",
                 "text": {
                     "type": "mrkdwn",
-                    "text": ":sparkles: <" + requs[i]['url'] + "|Aptible Room Request> :sparkles:"
+                    "text": ":sparkles: <" + reqs[i]['url'] + "|Aptible Room Request> :sparkles:"
                 }
             },
             {
@@ -91,7 +91,7 @@ def update_request(requester, user_id, status, note="N/A"):
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": ":sparkles:" + status.upper() + " Aptible Room Request :sparkles:"
+                "text": ":sparkles: " + status.upper() + " Aptible Room Request :sparkles:"
             }
         },
         {

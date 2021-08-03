@@ -25,17 +25,21 @@ def pending_request_check():
     if request_queue.status_code == 200:
         queue_blob = request_queue.json()
         queue_info = queue_blob['authorization_requests']
-        print('Queue successfully retrieved.')
+        print('Queue successfully retrieved. It is length: ', len(queue_info))
     else:
         print('Unknown error encountered.')
         print('Error: ',  request_queue.status_code)
         print('')
 
+    to_pop = []
     for i in range(0, len(queue_info)):
         if db.session.query(Rooms).filter_by(request_id=queue_info[i]['id']):
-            print(db.session.query(Rooms).filter_by(request_id=queue_info[i]['id']))
-            print("request id " + queue_info[i]['id'] + " is already in db")
-            queue_info.pop(i)
+            print("request id " + queue_info[i]['email'] + " is already in db")
+            to_pop.append(i)
+    print("to pop: ", to_pop)
+    for i in range(len(to_pop) - 1, -1, -1):
+        print("i is: ", i)
+        queue_info.pop(i)
 
     return queue_info
 
@@ -63,7 +67,7 @@ def get_queue_info(queue_info):
                             url=queue_item['url'])
         db.session.add(new_request)
         db.session.commit()
-        print(f"added {queue_info['id']} request to database")
+        print(f"added {queue_info[i]['id']} request to database")
 
     return queue_specifics
 
@@ -75,7 +79,6 @@ def approve_requests(request_id, email, addtl_perms):
                 'reviewer_email': email,
                 'access_group_ids': addtl_perms,
                 'nda_bypass': False }
-    contact =
     print('Payload: ', payload)
     do_approval = requests.post(apt_url + 'authorizations', headers=apt_head, json=payload)
     if str(do_approval.status_code)[0] == '2':

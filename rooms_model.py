@@ -16,9 +16,9 @@ class Rooms(db.Model):
     message = db.Column(db.String(500), nullable=False)
     status = db.Column(db.String(20), nullable=False)
     url = db.Column(db.String(150), nullable=False)
-    reviewer = db.Column(db.String(100), nullable)
-    reviewed_at = db.Column(db.String(25), nullable)
-    reject_note = db.Column(db.String(500), nullable)
+    reviewer = db.Column(db.String(100), nullable=True)
+    reviewed_at = db.Column(db.String(25), nullable=True)
+    reject_note = db.Column(db.String(500), nullable=True)
 
     def __repr__(self):
         return f"<Room Request: {self.request_id} from {self.email} at {self.requested_at}. Status is {self.status}."
@@ -29,7 +29,7 @@ class Rooms(db.Model):
 def connect_to_db(app):
     # connect db to main flask app
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///rooms'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///aptible'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     db.app = app
     db.init_app(app)
