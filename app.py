@@ -156,9 +156,8 @@ def monitor_the_queue():
             print("we are inside the if loop for the queue check")
             reqs = aptible_bot.get_queue_info(queue_info)
             queue = slack_messages.create_queue(reqs)
-            print("the queue")
             for i in range(0, len(queue)):
-                print("block to send")
+                print("block to send", queue[i])
                 try:
                     result = app.client.chat_postMessage(
                         channel=channel_id,
@@ -168,9 +167,10 @@ def monitor_the_queue():
                     logger.info(result)
                 except SlackApiError as e:
                     print(f"Error: {e}")
-
         # wait a minute then check again
+        print("time to sleep")
         time.sleep(60)
+        print("done sleeping")
 
 monitor_the_queue()
 
