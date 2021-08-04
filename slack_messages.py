@@ -15,15 +15,22 @@ def create_queue(reqs):
             {
                 "type": "header",
                 "text": {
-                    "type": "mrkdwn",
-                    "text": ":sparkles: <" + reqs[i]['url'] + "|Aptible Room Request> :sparkles:"
+                    "type": "plain_text",
+                    "text": ":sparkles: Conveyor Room Request :sparkles:"
                 }
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "From: " + reqs[i]['from']
+                    "text": "<" + reqs[i]['url'] + "|New access request from:>" + reqs[i]['from']
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "plain_text",
+                    "text": reqs[i]['from']
                 }
             },
             {
@@ -91,7 +98,7 @@ def update_request(requester, user_id, status, note="N/A"):
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": ":sparkles: " + status.upper() + " Aptible Room Request :sparkles:"
+                "text": ":sparkles: " + status.upper() + " Conveyor Room Request :sparkles:"
             }
         },
         {
