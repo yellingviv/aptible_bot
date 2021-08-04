@@ -8,7 +8,7 @@ import time
 import json
 import os
 from dotenv import load_dotenv
-from rooms_model import connect_to_db, db, Rooms
+from rooms_model import connect_to_db, db, Asks
 from datetime import datetime
 
 load_dotenv()
@@ -33,7 +33,7 @@ def pending_request_check():
 
     to_pop = []
     for i in range(0, len(queue_info)):
-        if db.session.query(Rooms).filter_by(request_id=queue_info[i]['id']):
+        if db.session.query(Asks).filter_by(request_id=queue_info[i]['id']).first():
             print("request id " + queue_info[i]['email'] + " is already in db")
             to_pop.append(i)
     print("to pop: ", to_pop)
@@ -59,7 +59,7 @@ def get_queue_info(queue_info):
         queue_item['message'] = queue_info[i]['message']
         queue_item['url'] = queue_info[i]['_links']['self']['href']
         queue_specifics.append(queue_item)
-        new_request = Rooms(request_id=queue_item['id'],
+        new_request = Asks(request_id=queue_item['id'],
                             email=queue_item['from'],
                             requested_at=queue_item['time'],
                             message=queue_item['message'],
@@ -131,7 +131,7 @@ def get_selections(payload, selections):
 def update_request_info(request_id, email, action, note="N/A"):
     # update request info in the db once approved or not
 
-    processed_request = db.session.query(Rooms).filter_by(request_id=request_id).first()
+    processed_request = db.session.query(Asks).filter_by(request_id=request_id).first()
     processed_request.reviewer = email
     processed_request.reviewed_at = datetime.now()
     if action == 'approved':
