@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import json
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_sdk import WebClient
@@ -22,20 +23,6 @@ app = App(
 logger = logging.getLogger(__name__)
 channel_id = os.getenv('SLACK_CHANNEL_ID')
 
-# setting up flask to provide safer happier friendly friend life
-flask_app = Flask(__name__)
-handler = SlackRequestHandler(app)
-
-@flask_app.route("/slack/events", methods=["POST"])
-def slack_events():
-    return handler.handle(request)
-
-# instantiate and connect to db
-rooms_model.connect_to_db(flask_app)
-
-# check the queue for new requests
-queue_info = aptible_bot.pending_request_check()
-print("queue size: ", len(queue_info))
 
 @app.action("approve")
 def handle_approval(ack, body, client, say):
@@ -80,7 +67,7 @@ def handle_rejection(ack, body, client):
     get_email = client.users_info(user=body['user']['id'])
     user_email = get_email['user']['profile']['email']
     requester = body['message']['blocks'][1]['text']['text'][6:]
-    get_feedback(body['container']['ts'], requester, user_id, client)
+    get_feedback(body['container']['message_ts'], body['trigger_id'], requester, user_id, client)
 
 
 @app.action("perms")
@@ -93,25 +80,36 @@ def handle_perm_ticks(ack):
     print('they messin with them boxes again')
 
 
-@app.view("feedback")
-def handle_view_submission(ack, body, client, view, logger):
+@app.view_submission("feedback")
+def handle_view_events(ack, body, client, view, logger):
     # process the submitted modal with rejection notes
 
+    ack()
     respond_close = {"response_action": "clear"}
     ack(respond_close)
-    note  = view['state']['values']['feedback_text']['feedback_input']
-    user_id = view['private_metadata']['user_id']
-    requester = view['private_metadata']['requester']
-    ts = view['private_metadata']['ts']
+    print('view: ', view)
+    metadata = json.loads(view['private_metadata'])
+    note = list(view['state']['values'].keys())[0]
+    user_id = metadata['user_id']
+    requester = metadata['requester']
+    ts = metadata['ts']
+    aptible_bot.reject_requests()
     update_request_screen(ts, requester, user_id, 'reject', client, note)
     # also call to update the db plz
 
 
-def get_feedback(origin_ts, requester, user_id, client):
+@app.view_closed("feedback")
+def handle_view_close(ack, body, logger):
+
+    ack()
+
+
+def get_feedback(origin_ts, trigger, requester, user_id, client):
     # get feedback from reviewer on why the rejection via modal
 
+    data_str = json.dumps({"ts": origin_ts, "requester": requester, "user_id": user_id})
     client.views_open(
-        trigger_id=body['trigger_id'],
+        trigger_id=trigger,
         view={
             "type": "modal",
             "callback_id": "feedback",
@@ -119,14 +117,13 @@ def get_feedback(origin_ts, requester, user_id, client):
             "submit": {"type": "plain_text", "text": "Submit"},
             "blocks": [
                 {"type": "input",
-                "block_id": "feedback_text",
-                "label": {"type": "plain_text", "text": "Please explain the reason for rejecting this request."},
                 "element": {"type": "plain_text_input", "action_id": "feedback_input", "multiline": True},
-                "optional": false
+                "label": {"type": "plain_text", "text": "Please explain the reason for rejecting this request:"},
+                "optional": False
                 }
             ],
             "notify_on_close": True,
-            "private_metadata": {'ts': origin_ts, 'requester': requester, 'user_id': user_id}
+            "private_metadata": data_str
         }
     )
 
@@ -152,12 +149,12 @@ def monitor_the_queue():
 
     print("we are monitoring the queue")
     while True:
+        # refresh queue for new requests
+        queue_info = aptible_bot.pending_request_check()
         if queue_info != []:
-            print("we are inside the if loop for the queue check")
             reqs = aptible_bot.get_queue_info(queue_info)
             queue = slack_messages.create_queue(reqs)
             for i in range(0, len(queue)):
-                print("block to send", queue[i])
                 try:
                     result = app.client.chat_postMessage(
                         channel=channel_id,
@@ -172,7 +169,16 @@ def monitor_the_queue():
         time.sleep(60)
         print("done sleeping")
 
-monitor_the_queue()
+# setting up flask to provide safer happier friendly friend life
+flask_app = Flask(__name__)
+handler = SlackRequestHandler(app)
+rooms_model.connect_to_db(flask_app)
+
+@flask_app.route("/slack/events", methods=["POST"])
+def slack_events():
+    return handler.handle(request)
+
+# monitor_the_queue()
 
 # start the app
 if __name__ == "__main__":
