@@ -5,7 +5,7 @@ db = SQLAlchemy()
 # define rooms db model
 # good news she be basic brah
 
-class Rooms(db.Model):
+class Asks(db.Model):
     # rooms, not requests, due to using requests lib -- too much repeat!!
 
     __tablename__ = "room_requests"
@@ -30,8 +30,8 @@ def connect_to_db(app):
     # connect db to main flask app
 
     app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///aptible'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     db.app = app
     db.init_app(app)
+    db.drop_all()
     db.create_all()
     print('db is up and running yeehaw')
