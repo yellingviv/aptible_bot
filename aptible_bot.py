@@ -33,7 +33,9 @@ def pending_request_check():
 
     to_pop = []
     for i in range(0, len(queue_info)):
-        if db.session.query(Asks).filter_by(request_id=queue_info[i]['id']).first():
+        check_db = db.session.query(Asks).filter_by(request_id=queue_info[i]['id']).first()
+        print(check_db)
+        if check_db:
             print("request id " + queue_info[i]['email'] + " is already in db")
             to_pop.append(i)
     print("to pop: ", to_pop)
@@ -90,6 +92,22 @@ def approve_requests(request_id, email, addtl_perms):
         return error_msg
 
 
+def reject_requests(request_id, email):
+    # reject a request, mwahaha
+
+    payload = { 'status': 'ignored',
+                'reviewer_email': email }
+    print('Payload: ', payload)
+    do_rejection = requests.patch(apt_url + 'authorization_requests/' + request_id, headers=apt_head, json=payload)
+    if str(do_rejection.status_code)[0] == '2':
+        print('Request successfully approved.')
+        update_request_info(request_id, email, 'rejected')
+        return('yay')
+    else:
+        error_msg = 'Error encountered while attempting to reject this request. Error code received is ' + str(do_approval.status_code) + '. Please contact @vivienne for help.'
+        return error_msg
+
+
 def get_perms():
     # pull access group permissions list and format to use in options list on Slack
 
@@ -134,8 +152,6 @@ def update_request_info(request_id, email, action, note="N/A"):
     processed_request = db.session.query(Asks).filter_by(request_id=request_id).first()
     processed_request.reviewer = email
     processed_request.reviewed_at = datetime.now()
-    if action == 'approved':
-        processed_request.status = 'approved'
-    elif action == 'rejected':
-        processed_request.status = 'rejected'
-        processed_request.reject_note = note
+    processed_request.status = action
+    processed_request.reject_note = note
+    db.session.commit()
