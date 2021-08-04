@@ -61,7 +61,7 @@ def create_queue(reqs):
                             "type": "plain_text",
                             "text": "Approve Request"
                         },
-                        "value": reqs[i]['id'],
+                        "value": "y-" + reqs[i]['id'],
                         "action_id": "approve"
                     },
                     {
@@ -70,7 +70,7 @@ def create_queue(reqs):
                             "type": "plain_text",
                             "text": "Reject Request"
                         },
-                        "value": reqs[i]['id'],
+                        "value": "n-" + reqs[i]['id'],
                         "action_id": "reject"
                     }
                 ]
