@@ -2,6 +2,8 @@ import os
 import logging
 import time
 import json
+import threading
+import config
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
 from slack_sdk import WebClient
@@ -15,38 +17,39 @@ import rooms_model
 
 load_dotenv()
 
+format = "%(asctime)s: %(message)s"
+logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+logger = logging.getLogger(__name__)
+
 # initialize app with slack bot token and signing secret
 app = App(
     token=os.getenv('SLACK_BOT_TOKEN'),
     signing_secret=os.getenv('SLACK_SIGNING_SECRET')
 )
-logger = logging.getLogger(__name__)
 channel_id = os.getenv('SLACK_CHANNEL_ID')
 
 
 @app.action("approve")
 def handle_approval(ack, body, client, say):
-    # approve via slack - update message in channel, update db, update aptible
+    # approve request in aptible and update the db, update the slack content on success
 
     ack()
-    requester = body['message']['blocks'][1]['text']['text'][6:]
     payload = body['message']['blocks']
     selections = body['state']['values']
     addtl_perms = aptible_bot.get_selections(payload, selections)
     if addtl_perms == 'yikes':
         say("Something went wrong with the permissions. Please contact @vivienne.")
-    user_id = body['user']['id']
-    # get_email = client.users_info(user=body['user']['id'])
-    # user_email = get_email['user']['profile']['email']
-    user_email = 'vpustell@pagerduty.com'
+        logger.info("Error in fetching additional permissions")
+    requester = body['message']['blocks'][2]['text']['text']
     request_id = body['actions'][0]['value']
+    user_id = body['user']['id']
+    get_email = client.users_info(user=body['user']['id'])
+    user_email = get_email['user']['profile']['email']
     approve_it = aptible_bot.approve_requests(request_id, user_email, addtl_perms)
     if approve_it == 'yay':
-        say("Approval success!")
-        update_request_screen(body['container']['ts'], requester, user_id, 'approve', client)
-        # call_some_db_update_here_please()
+        update_request_screen(body['container']['message_ts'], requester, user_id, 'approved', client)
     else:
-        print(approve_it)
+        logger.info(approve_it)
         try:
             response = app.client.chat_postMessage(
                 channel=channel_id,
@@ -54,7 +57,7 @@ def handle_approval(ack, body, client, say):
                 text=approve_it
             )
         except SlackApiError as e:
-            print(f"Error: {e}")
+            logger.info(f"Error: {e}")
 
 
 @app.action("reject")
@@ -62,12 +65,12 @@ def handle_rejection(ack, body, client):
     # process slack reject - call for modal to get more info
 
     ack()
-    print('reject button go clicky')
+    request_id = body['message']['blocks'][6]['elements'][1]['value']
     user_id = body['user']['id']
     get_email = client.users_info(user=body['user']['id'])
     user_email = get_email['user']['profile']['email']
-    requester = body['message']['blocks'][1]['text']['text'][6:]
-    get_feedback(body['container']['message_ts'], body['trigger_id'], requester, user_id, client)
+    requester = body['message']['blocks'][2]['text']['text']
+    get_feedback(body['container']['message_ts'], body['trigger_id'], requester, user_id, user_email, request_id, client)
 
 
 @app.action("perms")
@@ -77,37 +80,37 @@ def handle_perm_ticks(ack):
     # this is purely to prevent error messages within the slack app that scare people
 
     ack()
-    print('they messin with them boxes again')
 
 
 @app.view_submission("feedback")
-def handle_view_events(ack, body, client, view, logger):
+def handle_view_events(ack, body, client, view):
     # process the submitted modal with rejection notes
+    # file rejection in aptible, update database, update Slack with the info
 
-    ack()
     respond_close = {"response_action": "clear"}
     ack(respond_close)
-    print('view: ', view)
     metadata = json.loads(view['private_metadata'])
-    note = list(view['state']['values'].keys())[0]
+    note = view['state']['values'][list(view['state']['values'].keys())[0]]['feedback_input']['value']
     user_id = metadata['user_id']
     requester = metadata['requester']
     ts = metadata['ts']
-    aptible_bot.reject_requests()
-    update_request_screen(ts, requester, user_id, 'reject', client, note)
-    # also call to update the db plz
+    aptible_bot.reject_requests(metadata['request_id'], metadata['user_email'], note)
+    update_request_screen(ts, requester, user_id, 'rejected', client, note)
 
 
 @app.view_closed("feedback")
 def handle_view_close(ack, body, logger):
+    # again just tracking
 
     ack()
+    logger.info("rejection form closed without submission")
 
 
-def get_feedback(origin_ts, trigger, requester, user_id, client):
+def get_feedback(origin_ts, trigger, requester, user_id, user_email, request_id, client):
     # get feedback from reviewer on why the rejection via modal
+    # rejection should not be common, so we want to have info on why to respond to inquiries
 
-    data_str = json.dumps({"ts": origin_ts, "requester": requester, "user_id": user_id})
+    data_str = json.dumps({"ts": origin_ts, "requester": requester, "user_id": user_id, "user_email": user_email, "request_id": request_id})
     client.views_open(
         trigger_id=trigger,
         view={
@@ -136,18 +139,17 @@ def update_request_screen(ts, requester, user_id, status, client, note="N/A"):
         result = app.client.chat_update(
             channel=channel_id,
             ts=ts,
-            blocks=[{"type": "section", "text": {"type": "plain_text", "text": "hahahaha maniacal laughter"}}],
-            # blocks=slack_message.update_request(requester, user, status, note)
+            blocks=slack_messages.update_request(requester, user_id, status, note),
             text="You have successfully approved this request."
         )
     except SlackApiError as e:
-        print(f"Error: {e}")
+        logger.info(f"Error: {e}")
 
 
 def monitor_the_queue():
-    # post new requests to slack
+    # checks in with aptible for new requests and posts them to slack
 
-    print("we are monitoring the queue")
+    logger.info("started monitoring the queue")
     while True:
         # refresh queue for new requests
         queue_info = aptible_bot.pending_request_check()
@@ -161,13 +163,14 @@ def monitor_the_queue():
                         blocks=queue[i],
                         text="you should only see this if something went wrong, which means something went wrong. Please contact @vivienne!"
                     )
-                    logger.info(result)
+                    logger.info(f"posted to channel: {result.status_code}")
                 except SlackApiError as e:
-                    print(f"Error: {e}")
-        # wait a minute then check again
-        print("time to sleep")
+                    logger.info(f"Error: {e}")
+        # wait a minute then check again ... is a minute too frequent? PROBABLY. Can be changed.
+        logger.info("sleep starting")
         time.sleep(60)
-        print("done sleeping")
+        logger.info("sleep finished")
+
 
 # setting up flask to provide safer happier friendly friend life
 flask_app = Flask(__name__)
@@ -178,8 +181,10 @@ rooms_model.connect_to_db(flask_app)
 def slack_events():
     return handler.handle(request)
 
-# monitor_the_queue()
 
 # start the app
 if __name__ == "__main__":
+    monitor = threading.Thread(target=monitor_the_queue)
+    monitor.start()
+    logging.info("Main    : starting Bolt app")
     app.start(port=int(os.environ.get("PORT", 3000)))
