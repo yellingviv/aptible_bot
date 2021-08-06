@@ -2,14 +2,18 @@
 # it sends requests into slack and allows authorized users to approve from within slack
 # this is something of a beta test of the new API so let's be kind :)
 
-# from flask import Flask, render_template, redirect, request, flash, session, jsonify
 import requests
 import time
 import json
 import os
+import logging
 from dotenv import load_dotenv
 from rooms_model import connect_to_db, db, Asks
 from datetime import datetime
+
+format = "%(asctime)s: %(message)s"
+logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 apt_key = os.getenv('APTIBLE_KEY')
@@ -18,29 +22,23 @@ apt_head = {'X-API-KEY': apt_key, 'Accept': 'application/json', 'Content-Type': 
 
 
 def pending_request_check():
-    # check for active requests in queue
-    # retrieve whatever is there if not empty
+    # pull the current queue and compare against known requests
+    # remove repeat requests and return new requests
 
     request_queue = requests.get(apt_url + 'authorization_request_queue', headers=apt_head)
     if request_queue.status_code == 200:
         queue_blob = request_queue.json()
         queue_info = queue_blob['authorization_requests']
-        print('Queue successfully retrieved. It is length: ', len(queue_info))
+        logger.info(f"Queue successfully retrieved. It is length: {len(queue_info)}")
     else:
-        print('Unknown error encountered.')
-        print('Error: ',  request_queue.status_code)
-        print('')
-
+        logger.info('Error: ',  request_queue.status_code)
     to_pop = []
     for i in range(0, len(queue_info)):
         check_db = db.session.query(Asks).filter_by(request_id=queue_info[i]['id']).first()
-        print(check_db)
         if check_db:
-            print("request id " + queue_info[i]['email'] + " is already in db")
             to_pop.append(i)
-    print("to pop: ", to_pop)
+    logger.info(f"{len(to_pop)} out of {len(queue_info)} already in DB, skipped in queue")
     for i in range(len(to_pop) - 1, -1, -1):
-        print("i is: ", i)
         queue_info.pop(i)
 
     return queue_info
@@ -50,9 +48,7 @@ def get_queue_info(queue_info):
     # clean up the queue to be easier to put into blocks. this is vanity mostly.
 
     queue_size = len(queue_info)
-    print('There are ', queue_size, ' requests in the queue.')
     queue_specifics = []
-
     for i in range(0, len(queue_info)):
         queue_item = {}
         queue_item['id'] = queue_info[i]['id']
@@ -69,7 +65,7 @@ def get_queue_info(queue_info):
                             url=queue_item['url'])
         db.session.add(new_request)
         db.session.commit()
-        print(f"added {queue_info[i]['id']} request to database")
+        logger.info(f"added {queue_info[i]['id']} request to database")
 
     return queue_specifics
 
@@ -81,10 +77,8 @@ def approve_requests(request_id, email, addtl_perms):
                 'reviewer_email': email,
                 'access_group_ids': addtl_perms,
                 'nda_bypass': False }
-    print('Payload: ', payload)
     do_approval = requests.post(apt_url + 'authorizations', headers=apt_head, json=payload)
     if str(do_approval.status_code)[0] == '2':
-        print('Request successfully approved.')
         update_request_info(request_id, email, 'approved')
         return('yay')
     else:
@@ -92,19 +86,17 @@ def approve_requests(request_id, email, addtl_perms):
         return error_msg
 
 
-def reject_requests(request_id, email):
+def reject_requests(request_id, email, note):
     # reject a request, mwahaha
 
     payload = { 'status': 'ignored',
                 'reviewer_email': email }
-    print('Payload: ', payload)
     do_rejection = requests.patch(apt_url + 'authorization_requests/' + request_id, headers=apt_head, json=payload)
     if str(do_rejection.status_code)[0] == '2':
-        print('Request successfully approved.')
-        update_request_info(request_id, email, 'rejected')
+        update_request_info(request_id, email, 'rejected', note)
         return('yay')
     else:
-        error_msg = 'Error encountered while attempting to reject this request. Error code received is ' + str(do_approval.status_code) + '. Please contact @vivienne for help.'
+        error_msg = 'Error encountered while attempting to reject this request. Error code received is ' + str(do_rejection.status_code) + '. Please contact @vivienne for help.'
         return error_msg
 
 
@@ -136,7 +128,6 @@ def get_selections(payload, selections):
         if field['type'] == 'input':
             block_id.append(field['block_id'])
     if len(block_id) != 1:
-        print('somehow we have more than one input field, please panic')
         return('yikes')
     extras = []
     num_selected = len(selections[block_id[0]]['perms']['selected_options'])
@@ -149,9 +140,11 @@ def get_selections(payload, selections):
 def update_request_info(request_id, email, action, note="N/A"):
     # update request info in the db once approved or not
 
+    timestamp = datetime.now()
+    reviewed = timestamp.strftime("%B %d, %Y, %I:%M %p")
     processed_request = db.session.query(Asks).filter_by(request_id=request_id).first()
     processed_request.reviewer = email
-    processed_request.reviewed_at = datetime.now()
+    processed_request.reviewed_at = reviewed
     processed_request.status = action
     processed_request.reject_note = note
     db.session.commit()
