@@ -23,7 +23,7 @@ def create_queue(reqs):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "<" + reqs[i]['url'] + "|New access request from:>" + reqs[i]['from']
+                    "text": "<" + reqs[i]['url'] + "|New access request from:>"
                 }
             },
             {
@@ -68,7 +68,7 @@ def create_queue(reqs):
                             "type": "plain_text",
                             "text": "Approve Request"
                         },
-                        "value": "y-" + reqs[i]['id'],
+                        "value": reqs[i]['id'],
                         "action_id": "approve"
                     },
                     {
@@ -77,7 +77,7 @@ def create_queue(reqs):
                             "type": "plain_text",
                             "text": "Reject Request"
                         },
-                        "value": "n-" + reqs[i]['id'],
+                        "value": reqs[i]['id'],
                         "action_id": "reject"
                     }
                 ]
@@ -105,7 +105,7 @@ def update_request(requester, user_id, status, note="N/A"):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"Request from {requester} {status}ed by <@{user}> at {stamp}."
+                "text": f"Request from {requester} {status}ed by <@{user_id}> at {stamp}."
             }
         },
         {
